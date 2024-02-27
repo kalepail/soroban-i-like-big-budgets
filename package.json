@@ -1,0 +1,15 @@
+{
+  "name": "soroban-i-like-big-budgets",
+  "module": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^11.2.2",
+    "i-like-big-budgets-sdk": "link:i-like-big-budgets-sdk"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
