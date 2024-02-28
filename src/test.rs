@@ -1,6 +1,5 @@
 #![cfg(test)]
 
-use std::println;
 extern crate std;
 
 use soroban_sdk::Env;
@@ -19,16 +18,21 @@ fn test_v1() {
     let contract_id = env.register_contract(None, Contract);
     let client = ContractClient::new(&env, &contract_id);
 
-    // env.budget().reset_limits(100000000, 41943040);
     env.budget().reset_unlimited();
-
-    let count = client.run(&10_000);
-
+    client.run(&Some(12_000), &None, &None, &None);
     env.budget().print();
-    // Cpu limit: 18446744073709551615; used: 117728669
-    // Mem limit: 18446744073709551615; used: 5251568
 
-    println!("{:?}", count);
+    env.budget().reset_unlimited();
+    client.run(&None, &Some(10_000), &None, &None);
+    env.budget().print();
+
+    env.budget().reset_unlimited();
+    client.run(&None, &None, &Some(30), &None);
+    env.budget().print();
+
+    env.budget().reset_unlimited();
+    client.run(&None, &None, &None, &Some(10));
+    env.budget().print();
 }
 
 #[test]
@@ -37,14 +41,19 @@ fn test_v2() {
     let contract_id = env.register_contract_wasm(None, i_like_big_budgets::WASM);
     let client = i_like_big_budgets::Client::new(&env, &contract_id);
 
-    // env.budget().reset_limits(100000000, 41943040);
     env.budget().reset_unlimited();
-
-    let count = client.run(&10_000);
-
+    client.run(&Some(12_000), &None, &None, &None);
     env.budget().print();
-    // Cpu limit: 18446744073709551615; used: 161241329
-    // Mem limit: 18446744073709551615; used: 7451375
 
-    println!("{:?}", count);
+    env.budget().reset_unlimited();
+    client.run(&None, &Some(10_000), &None, &None);
+    env.budget().print();
+
+    env.budget().reset_unlimited();
+    client.run(&None, &None, &Some(30), &None);
+    env.budget().print();
+
+    env.budget().reset_unlimited();
+    client.run(&None, &None, &None, &Some(10));
+    env.budget().print();
 }

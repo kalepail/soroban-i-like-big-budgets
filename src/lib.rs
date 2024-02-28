@@ -1,39 +1,82 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, Env, Map, Vec};
+use soroban_sdk::{contract, contractimpl, Bytes, Env};
 
 #[contract]
 pub struct Contract;
 
 #[contractimpl]
 impl Contract {
-    pub fn run(env: Env, iters: u32) {
-        let mut keys_map = Map::new(&env);
-        let mut keys_vec = Vec::new(&env);
-        let mut count = 0;
+    pub fn run(
+        env: Env,
+        gimme_cpu: Option<u32>,
+        gimme_mem: Option<u32>,
+        gimme_storage: Option<u32>,
+        gimme_events: Option<u32>,
+    ) {
+        if gimme_cpu.is_some() {
+            let iters = gimme_cpu.unwrap();
 
-        for i in 0..iters {
-            let key = env.crypto().sha256(&env.prng().gen_len(32));
-                
-            keys_map.clone().set(key.clone(), i);
-            keys_vec.clone().push_back(key.clone());
-        
-            if i % 100 == 0 {
-                env.events().publish((count.clone(), ), keys_map.clone());
-                env.storage().persistent().set(&count.clone(), &(keys_map.clone(), keys_vec.clone()));
-                keys_map = Map::new(&env);
-                keys_vec = Vec::new(&env);
-                count += 1;
+            for _ in 0..iters {
+                env.crypto().sha256(&env.prng().gen_len(32));
             }
         }
+
+        if gimme_mem.is_some() {
+            let mut bytes = Bytes::new(&env);
+            let iters = gimme_mem.unwrap();
+
+            for i in 0..iters {
+                bytes.push_back(i as u8)
+            }
+        }
+
+        if gimme_storage.is_some() {
+            let iters = gimme_storage.unwrap();
+
+            for i in 0..iters {
+                env.storage().persistent().set(&i, &i);
+            }
+        }
+
+        if gimme_events.is_some() {
+            let iters = gimme_events.unwrap();
+
+            for i in 0..iters {
+                env.events()
+                    .publish((i,), env.prng().gen_len::<Bytes>(1000));
+            }
+        }
+
+        // let mut keys_map = Map::new(&env);
+        // let mut keys_vec = Vec::new(&env);
+        // let mut count = 0;
+
+        // for i in 0..iters {
+        //     let key = env.crypto().sha256(&env.prng().gen_len(32));
+
+        //     keys_map.clone().set(key.clone(), i);
+        //     keys_vec.clone().push_back(key.clone());
+
+        //     if i % 100 == 0 {
+        //         env.events().publish((count.clone(), ), keys_map.clone());
+        //         count = count.clone();
+        //         keys_map = keys_map.clone();
+        //         keys_vec = keys_vec.clone();
+        //         // env.storage().persistent().set(&count.clone(), &(keys_map.clone(), keys_vec.clone()));
+        //         keys_map = Map::new(&env);
+        //         keys_vec = Vec::new(&env);
+        //         count += 1;
+        //     }
+        // }
     }
 }
 
-/* TODO 
+/* TODO
 hit CPU
 hit memory
 hit storage writes
 hit return value via emitted events
-*/ 
+*/
 
 mod test;
