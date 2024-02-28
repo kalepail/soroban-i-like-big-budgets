@@ -36,7 +36,7 @@ for (const [small, big, type] of args) {
         ]
         const smallArgs = [...args]
         const bigArgs = [...args]
-    
+
         smallArgs[i] = nativeToScVal(small, { type: 'u32' })
         bigArgs[i] = nativeToScVal(big, { type: 'u32' })
 

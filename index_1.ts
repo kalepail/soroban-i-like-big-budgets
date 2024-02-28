@@ -35,7 +35,7 @@ for (const [big, type] of args) {
             xdr.ScVal.scvVoid(),
         ]
         const bigArgs = [...args]
-    
+
         bigArgs[i] = nativeToScVal(big, { type: 'u32' })
 
         await run(bigArgs)
