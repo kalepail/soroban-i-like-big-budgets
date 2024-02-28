@@ -1,14 +1,11 @@
-import { Account, Horizon, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 
 if (
     !Bun.env.CONTRACT_ID
     || !Bun.env.SECRET
 ) throw new Error('Missing .env.local file. Run `bun run deploy.ts` to create it.')
 
-const horizonUrl = 'http://localhost:8000'
 const rpcUrl = 'http://localhost:8000/soroban/rpc'
-
-const horizon = new Horizon.Server(horizonUrl, { allowHttp: true })
 const rpc = new SorobanRpc.Server(rpcUrl, { allowHttp: true })
 
 const keypair = Keypair.fromSecret(Bun.env.SECRET)
