@@ -1,19 +1,24 @@
-import { Account, Address, Horizon, Keypair, Operation, Soroban, SorobanRpc, StrKey, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Account, Address, Horizon, Keypair, Networks, Operation, Soroban, SorobanDataBuilder, SorobanRpc, StrKey, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 import { $ } from "bun";
-import { Contract, networks } from "i-like-big-budgets-sdk";
+// import { Contract, networks } from "i-like-big-budgets-sdk";
 
 const horizonUrl = 'http://localhost:8000' // 'https://horizon-futurenet.stellar.org'
 const rpcUrl = 'http://localhost:8000/soroban/rpc' // 'https://rpc-futurenet.stellar.org'
-const contractId = 'CDDRE2PWNYL6VKA5DEJWSH7EBUXXDLOKDXZASQ7QW3V5MH5V4O4I7RPK'
+
+const contractId = 'CDBWCDAYXMNGJMARLDVDVZPIRJKMSOR4E2V2EYGJPIG3XRUZB2LPLIIC'
+const networkPassphrase = Networks.STANDALONE
+
 // const contract = new Contract({
 //     ...networks.futurenet,
 //     rpcUrl
 // });
 
-const horizon = new Horizon.Server(horizonUrl, {allowHttp: true})
-const rpc = new SorobanRpc.Server(rpcUrl, {allowHttp: true})
+const horizon = new Horizon.Server(horizonUrl, { allowHttp: true })
+const rpc = new SorobanRpc.Server(rpcUrl, { allowHttp: true })
 
-const pubkey = StrKey.encodeEd25519PublicKey(Buffer.from(new Array(32).fill(0)))
+const keypair = Keypair.fromSecret('SAAZ7CF5Z6G6WPUVBWKKTUPRHZF22HMVGZXZRJCXSRKOUIHVLXRB3RDJ') // GCLLN5DW5MIOQUNLANLQ4JAT5JHXLZLARTHDEWO4DT7UPWYZ4LLZOLT3
+const pubkey = keypair.publicKey() // StrKey.encodeEd25519PublicKey(Buffer.from(new Array(32).fill(0)))
+
 const source = await rpc
     .getAccount(pubkey)
     .then((account) => new Account(account.accountId(), account.sequenceNumber()))
@@ -21,40 +26,46 @@ const source = await rpc
     .then(() => rpc.getAccount(pubkey))
     .then((account) => new Account(account.accountId(), account.sequenceNumber()))
 
-const tx = new TransactionBuilder(source, {
+const simTx = new TransactionBuilder(source, {
     fee: (10_000_000).toString(),
-    networkPassphrase: networks.futurenet.networkPassphrase
+    networkPassphrase
 })
     .addOperation(Operation.invokeContractFunction({
         contract: contractId, // networks.futurenet.contractId,
         function: 'run',
         args: [
-            nativeToScVal(2_000, { type: 'u32' })
+            nativeToScVal(100, { type: 'u32' })
         ]
     }))
     .setTimeout(0)
     .build()
 
-const res = await rpc._simulateTransaction(tx)
+const simRes = await rpc._simulateTransaction(simTx)
 
-console.log(res)
+console.log(simRes);
 
-// res.events.forEach(async (event) => {
-    // console.log(
-    //     scValToNative(event.event().body().v0().data())
-    // );
-    
-    // console.log(
-        // await $`echo -n "${event.event().body().v0().toXDR('base64')}" > bun ./dec.sh`
-    // )
+const sorobanData = new SorobanDataBuilder(simRes.transactionData)
+    .build();
 
-    // console.log(
-    //     `'${event.event().body().v0().toXDR('base64')}'`
-    // );
-// })
+const tx = TransactionBuilder.cloneFrom(simTx)
+    .clearOperations()
+    .addOperation(Operation.invokeContractFunction({
+        contract: contractId, // networks.futurenet.contractId,
+        function: 'run',
+        args: [
+            nativeToScVal(10_000, { type: 'u32' })
+        ]
+    }))
+    .setSorobanData(sorobanData)
+    .build()
 
-// const res = await contract.run({
-//     count: 2000
-// })
+tx.sign(keypair)
 
-// console.log(res.simulationData);
+const sendRes = await rpc._sendTransaction(tx)
+
+console.log(sendRes);
+
+setTimeout(async () => {
+    const getRes = await rpc._getTransaction(sendRes.hash)
+    console.log(getRes)
+}, 5000)

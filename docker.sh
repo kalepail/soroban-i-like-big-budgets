@@ -3,5 +3,6 @@ docker run --rm -i \
     --name stellar \
     stellar/quickstart:latest \
     --local \
+    --limits testnet \
     --enable-soroban-rpc \
     --enable-soroban-diagnostic-events

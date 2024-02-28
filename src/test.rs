@@ -22,13 +22,13 @@ fn test_v1() {
     // env.budget().reset_limits(100000000, 41943040);
     env.budget().reset_unlimited();
 
-    let hashes = client.run(&2_000);
+    let count = client.run(&10_000);
 
     env.budget().print();
-    // Cpu limit: 18446744073709551615; used: 628491880
-    // Mem limit: 18446744073709551615; used: 48823424
+    // Cpu limit: 18446744073709551615; used: 117728669
+    // Mem limit: 18446744073709551615; used: 5251568
 
-    println!("{:?}", hashes.len());
+    println!("{:?}", count);
 }
 
 #[test]
@@ -40,45 +40,11 @@ fn test_v2() {
     // env.budget().reset_limits(100000000, 41943040);
     env.budget().reset_unlimited();
 
-    let hashes = client.run(&2_000);
+    let count = client.run(&10_000);
 
     env.budget().print();
-    // Cpu limit: 18446744073709551615; used: 636232861
-    // Mem limit: 18446744073709551615; used: 50176306
+    // Cpu limit: 18446744073709551615; used: 161241329
+    // Mem limit: 18446744073709551615; used: 7451375
 
-    println!("{:?}", hashes.len());
+    println!("{:?}", count);
 }
-
-// #[test]
-// fn test_v2() {
-//     let env = Env::default();
-//     let contract_id = env.register_contract(None, Contract);
-//     let client = ContractClient::new(&env, &contract_id);
-
-//     env.budget().reset_limits(100000000, 41943040);
-
-//     let hash = client.v2();
-
-//     env.budget().print();
-//     // Cpu limit: 18446744073709551615; used: 9131770
-//     // Mem limit: 18446744073709551615; used: 12903884
-
-//     println!("{:?}", hash);
-// }
-
-// #[test]
-// fn test_v3() {
-//     let env = Env::default();
-//     let contract_id = env.register_contract(None, Contract);
-//     let client = ContractClient::new(&env, &contract_id);
-
-//     env.budget().reset_limits(100000000, 41943040);
-
-//     let hash = client.v3();
-
-//     env.budget().print();
-//     // Cpu limit: 18446744073709551615; used: 292230
-//     // Mem limit: 18446744073709551615; used: 6400
-
-//     println!("{:?}", hash);
-// }
