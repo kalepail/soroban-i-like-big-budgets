@@ -21,14 +21,20 @@ console.log('cleaned target')
 await $`soroban contract build`
 console.log('built contract')
 
-const contractId = await $`soroban contract deploy --wasm target/wasm32-unknown-unknown/release/i_like_big_budgets.wasm --rpc-url http://localhost:8000/soroban/rpc --network-passphrase ${Networks.STANDALONE} --source ${secret}`.text()
+const contractId = (await $`soroban contract deploy --wasm target/wasm32-unknown-unknown/release/i_like_big_budgets.wasm --rpc-url http://localhost:8000/soroban/rpc --network-passphrase ${Networks.STANDALONE} --source ${secret}`.text()).replace(/\W/g, '')
 console.log('deployed contract')
 
-if (!contractId) 
+await $`soroban contract bindings typescript --id ${contractId} --rpc-url http://localhost:8000/soroban/rpc --network-passphrase ${Networks.STANDALONE} --output-dir ./i-like-big-budgets-sdk --overwrite`
+await $`cd i-like-big-budgets-sdk && npm install && npm run build`
+await $`cd i-like-big-budgets-sdk && bun link`
+await $`bun install --force`
+console.log('generated sdk');
+
+if (!contractId)
     throw new Error('Contract not deployed')
 
 let file = ``
-file += `CONTRACT_ID=${contractId.replace(/\W/g, '')}\n`
+file += `CONTRACT_ID=${contractId}\n`
 file += `SECRET=${secret}`
 
 await Bun.write('.env.local', file);

@@ -1,4 +1,5 @@
-import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Keypair, Networks, SorobanDataBuilder, SorobanRpc, Transaction, TransactionBuilder, hash, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Contract, networks } from 'i-like-big-budgets-sdk'
 
 if (
     !Bun.env.CONTRACT_ID
@@ -14,58 +15,52 @@ const pubkey = keypair.publicKey()
 const contractId = Bun.env.CONTRACT_ID
 const networkPassphrase = Networks.STANDALONE
 
-const source = await rpc
-    .getAccount(pubkey)
-    .then((account) => new Account(account.accountId(), account.sequenceNumber()))
-    .catch(() => { throw new Error(`Issue with ${pubkey} account. Ensure you're running the \`./docker.sh\` network and have run \`bun run deploy.ts\` recently.`) })
+class Wallet {
+    isConnected = async () => true
+    isAllowed = async () => true
+    getUserInfo = async () => ({ publicKey: pubkey })
+    signTransaction = async (tx: string) => {
+        const t = TransactionBuilder.fromXDR(tx, networkPassphrase);
+        t.sign(keypair);
+        return t.toXDR();
+    }
+    signAuthEntry = async (entryXdr: string) => {
+        return keypair
+            .sign(hash(Buffer.from(entryXdr, 'base64')))
+            .toString('base64')
+    }
+}
 
-const simTx = new TransactionBuilder(source, {
-    fee: (2 ** 32 - 1).toString(),
-    networkPassphrase
+const contract = new Contract({
+    ...networks.standalone,
+    contractId,
+    rpcUrl,
+    wallet: new Wallet()
 })
-    .addOperation(Operation.invokeContractFunction({
-        contract: contractId, // networks.futurenet.contractId,
-        function: 'run',
-        args: [
-            // nativeToScVal(1, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            // nativeToScVal(1, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            // nativeToScVal(21, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            nativeToScVal(1, { type: 'u32' }),
-        ]
-    }))
-    .setTimeout(0)
-    .build()
 
-const simRes = await rpc._simulateTransaction(simTx)
+const simResSmall = await contract.run({
+    gimme_cpu: 1,
+    gimme_mem: undefined,
+    gimme_storage: undefined,
+    gimme_events: undefined
+})
 
-console.log(simRes);
-
-if (!simRes.transactionData) 
-    throw new Error('No transaction data. Review simulation response for errors. Maybe try running `bun run deploy.ts` again.')
-
-const sorobanData = new SorobanDataBuilder(simRes.transactionData)
+const sorobanData = new SorobanDataBuilder(simResSmall.simulationData.transactionData)
     .setResourceFee((2 ** 32 - 1) - 1_000_000)
     .setResources(100_000_000, 133_120, 66_560)
     .build();
 
-const tx = TransactionBuilder.cloneFrom(simTx)
-    .clearOperations()
-    .addOperation(Operation.invokeContractFunction({
-        contract: contractId, // networks.futurenet.contractId,
-        function: 'run',
-        args: [
-            // nativeToScVal(12_000, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            // nativeToScVal(10_000, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            // nativeToScVal(21, { type: 'u32' }),
-            xdr.ScVal.scvVoid(),
-            nativeToScVal(10, { type: 'u32' }),
-        ]
-    }))
+const simResBig = await contract.run({
+    gimme_cpu: 12_000,
+    gimme_mem: undefined,
+    gimme_storage: undefined,
+    gimme_events: undefined
+}, {
+    fee: 2 ** 32 - 1,
+})
+
+const tx = TransactionBuilder
+    .cloneFrom(new Transaction(simResBig.raw.toXDR(), networkPassphrase))
     .setSorobanData(sorobanData)
     .build()
 
