@@ -1,5 +1,4 @@
-import { Keypair, Networks, SorobanDataBuilder, SorobanRpc, Transaction, TransactionBuilder, hash, scValToNative, xdr } from "@stellar/stellar-sdk";
-import { Contract, networks } from 'i-like-big-budgets-sdk'
+import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, Transaction, TransactionBuilder, hash, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 
 if (
     !Bun.env.CONTRACT_ID
@@ -15,76 +14,98 @@ const pubkey = keypair.publicKey()
 const contractId = Bun.env.CONTRACT_ID
 const networkPassphrase = Networks.STANDALONE
 
-class Wallet {
-    isConnected = async () => true
-    isAllowed = async () => true
-    getUserInfo = async () => ({ publicKey: pubkey })
-    signTransaction = async (tx: string) => {
-        const t = TransactionBuilder.fromXDR(tx, networkPassphrase);
-        t.sign(keypair);
-        return t.toXDR();
-    }
-    signAuthEntry = async (entryXdr: string) => {
-        return keypair
-            .sign(hash(Buffer.from(entryXdr, 'base64')))
-            .toString('base64')
+let i = 0
+
+for (const [small, big] of [
+    [1, 12_000],
+    [1, 10_000],
+    [21, 21],
+    [1, 10]
+]) {
+    try {
+        await run(small, big, i)
+    } catch (error) {
+        console.error(error)
+    } finally {
+        i++
     }
 }
 
-const contract = new Contract({
-    ...networks.standalone,
-    contractId,
-    rpcUrl,
-    wallet: new Wallet()
-})
+async function run(small: number, big: number, i: number) {
+    const args = [
+        xdr.ScVal.scvVoid(),
+        xdr.ScVal.scvVoid(),
+        xdr.ScVal.scvVoid(),
+        xdr.ScVal.scvVoid(),
+    ]
+    const smallArgs = [...args]
+    const bigArgs = [...args]
 
-const simResSmall = await contract.run({
-    gimme_cpu: 1,
-    gimme_mem: undefined,
-    gimme_storage: undefined,
-    gimme_events: undefined
-})
+    smallArgs[i] = nativeToScVal(small, { type: 'u32' })
+    bigArgs[i] = nativeToScVal(big, { type: 'u32' })
 
-const sorobanData = new SorobanDataBuilder(simResSmall.simulationData.transactionData)
-    .setResourceFee((2 ** 32 - 1) - 1_000_000)
-    .setResources(100_000_000, 133_120, 66_560)
-    .build();
+    const source = await rpc
+        .getAccount(pubkey)
+        .then((account) => new Account(account.accountId(), account.sequenceNumber()))
+        .catch(() => { throw new Error(`Issue with ${pubkey} account. Ensure you're running the \`./docker.sh\` network and have run \`bun run deploy.ts\` recently.`) })
 
-const simResBig = await contract.run({
-    gimme_cpu: 12_000,
-    gimme_mem: undefined,
-    gimme_storage: undefined,
-    gimme_events: undefined
-}, {
-    fee: 2 ** 32 - 1,
-})
+    const simTx = new TransactionBuilder(source, {
+        fee: (2 ** 32 - 1).toString(),
+        networkPassphrase
+    })
+        .addOperation(Operation.invokeContractFunction({
+            contract: contractId,
+            function: 'run',
+            args: smallArgs
+        }))
+        .setTimeout(0)
+        .build()
 
-const tx = TransactionBuilder
-    .cloneFrom(new Transaction(simResBig.raw.toXDR(), networkPassphrase))
-    .setSorobanData(sorobanData)
-    .build()
+    const simRes = await rpc._simulateTransaction(simTx)
 
-tx.sign(keypair)
+    if (!simRes.transactionData)
+        throw new Error('No transaction data. Review simulation response for errors. Maybe try running `bun run deploy.ts` again.')
 
-console.log(tx.toXDR());
+    const sorobanData = new SorobanDataBuilder(simRes.transactionData)
+        .setResourceFee((2 ** 32 - 1) - 1_000_000)
+        .setResources(100_000_000, 133_120, 66_560)
+        .build();
 
-const sendRes = await rpc._sendTransaction(tx)
+    const tx = TransactionBuilder
+        .cloneFrom(simTx)
+        .clearOperations()
+        .addOperation(Operation.invokeContractFunction({
+            contract: contractId,
+            function: 'run',
+            args: bigArgs
+        }))
+        .setSorobanData(sorobanData)
+        .build()
 
-console.log(sendRes);
+    tx.sign(keypair)
 
-sendRes.status === 'PENDING' && setTimeout(async () => {
-    const getRes = await rpc._getTransaction(sendRes.hash)
+    console.log(tx.toXDR());
 
-    getRes.status !== 'FAILED' && console.log(getRes)
+    const sendRes = await rpc._sendTransaction(tx)
 
-    getRes.status === 'FAILED' && xdr.TransactionMeta
-        .fromXDR(getRes.resultMetaXdr!, 'base64')
-        .v3()
-        .sorobanMeta()
-        ?.diagnosticEvents()
-        .forEach((event) => {
-            console.log(
-                scValToNative(event.event().body().v0().data())
-            )
-        })
-}, 5000)
+    console.log(sendRes);
+
+    sendRes.status === 'PENDING' && await new Promise((resolve) => setTimeout(async () => {
+        const getRes = await rpc._getTransaction(sendRes.hash)
+
+        getRes.status !== 'FAILED' && console.log(getRes)
+
+        getRes.status === 'FAILED' && xdr.TransactionMeta
+            .fromXDR(getRes.resultMetaXdr!, 'base64')
+            .v3()
+            .sorobanMeta()
+            ?.diagnosticEvents()
+            .forEach((event) => {
+                console.log(
+                    scValToNative(event.event().body().v0().data())
+                )
+            })
+
+        resolve(1)
+    }, 5000))
+}
