@@ -1,4 +1,4 @@
-import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, Transaction, TransactionBuilder, hash, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 
 if (
     !Bun.env.CONTRACT_ID
@@ -15,35 +15,41 @@ const contractId = Bun.env.CONTRACT_ID
 const networkPassphrase = Networks.STANDALONE
 
 let i = 0
+let args: [number, number, string][] = [
+    [1, 15_000, 'CPU'],
+    [1, 10_000, 'MEMORY'],
+    [25, 25, 'STORAGE'], // NOTE if this is 50 you get a different error. Because why not?!
+    [1, 10, 'EVENTS'],
+]
 
-for (const [small, big] of [
-    [1, 12_000],
-    [1, 10_000],
-    [21, 21],
-    [1, 10]
-]) {
+for (const [small, big, type] of args) {
     try {
-        await run(small, big, i)
+        console.log(`\n`);
+        console.log(`RUNNING TEST FOR ${type}`);
+        console.log(`--------------------------`);
+
+        const args = [
+            xdr.ScVal.scvVoid(),
+            xdr.ScVal.scvVoid(),
+            xdr.ScVal.scvVoid(),
+            xdr.ScVal.scvVoid(),
+        ]
+        const smallArgs = [...args]
+        const bigArgs = [...args]
+    
+        smallArgs[i] = nativeToScVal(small, { type: 'u32' })
+        bigArgs[i] = nativeToScVal(big, { type: 'u32' })
+
+        await run(smallArgs, bigArgs)
     } catch (error) {
         console.error(error)
     } finally {
         i++
+        console.log(`--------------------------`);
     }
 }
 
-async function run(small: number, big: number, i: number) {
-    const args = [
-        xdr.ScVal.scvVoid(),
-        xdr.ScVal.scvVoid(),
-        xdr.ScVal.scvVoid(),
-        xdr.ScVal.scvVoid(),
-    ]
-    const smallArgs = [...args]
-    const bigArgs = [...args]
-
-    smallArgs[i] = nativeToScVal(small, { type: 'u32' })
-    bigArgs[i] = nativeToScVal(big, { type: 'u32' })
-
+async function run(smallArgs: xdr.ScVal[], bigArgs: xdr.ScVal[]) {
     const source = await rpc
         .getAccount(pubkey)
         .then((account) => new Account(account.accountId(), account.sequenceNumber()))
@@ -68,7 +74,7 @@ async function run(small: number, big: number, i: number) {
 
     const sorobanData = new SorobanDataBuilder(simRes.transactionData)
         .setResourceFee((2 ** 32 - 1) - 1_000_000)
-        .setResources(100_000_000, 133_120, 66_560)
+        .setResources(100_000_000, 133_120, 66_560) // Need to manually set resources due to sm sim and big sim resource consumption differences
         .build();
 
     const tx = TransactionBuilder

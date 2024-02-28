@@ -8,7 +8,7 @@ bun install
 
 To prepare:
 ```bash
-./docker.sh
+./docker-testnet.sh
 ```
 
 To deploy:
@@ -22,3 +22,9 @@ To run:
 ```bash
 bun run index.ts
 ```
+
+---
+
+1. Start with running `index_1.ts` under `./docker-testnet.sh`
+2. Next run `index_2.ts` under `./docker-testnet.sh`
+3. Finally run `index_3.ts` under `./docker-unlimited.sh`
