@@ -18,7 +18,7 @@ let i = 0
 let args: [number, number, string][] = [
     [1, 15_000, 'CPU'],
     [1, 10_000, 'MEMORY'],
-    [25, 25, 'STORAGE'], // NOTE if this is 50 you get a different error. Because why not?!
+    [50, 50, 'STORAGE'], // NOTE if this is 25 you get a different error. Because why not?!
     [1, 10, 'EVENTS'],
 ]
 

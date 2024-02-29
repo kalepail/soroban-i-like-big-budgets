@@ -5,13 +5,6 @@ use soroban_sdk::{contract, contractimpl, Bytes, Env};
 #[contract]
 pub struct Contract;
 
-/* TODO
-hit CPU
-hit memory
-hit storage writes
-hit return value via emitted events
-*/
-
 #[contractimpl]
 impl Contract {
     pub fn run(

@@ -1,6 +1,9 @@
 import { Horizon, Keypair, Networks } from '@stellar/stellar-sdk'
 import { $ } from 'bun'
 
+await $`bun rimraf target/wasm32-unknown-unknown/release .env.local`
+console.log('cleaned target')
+
 const horizonUrl = 'http://localhost:8000'
 const horizon = new Horizon.Server(horizonUrl, { allowHttp: true })
 
@@ -15,13 +18,12 @@ try {
 }
 console.log('created account')
 
-await $`bun rimraf target/wasm32-unknown-unknown/release .env.local`
-console.log('cleaned target')
-
 await $`soroban contract build`
 console.log('built contract')
 
-const contractId = (await $`soroban contract deploy --wasm target/wasm32-unknown-unknown/release/i_like_big_budgets.wasm --rpc-url http://localhost:8000/soroban/rpc --network-passphrase ${Networks.STANDALONE} --source ${secret}`.text()).replace(/\W/g, '')
+await $`soroban network add kalenet --rpc-url http://localhost:8000/soroban/rpc --network-passphrase ${Networks.STANDALONE}`
+await $`soroban keys add kalecount --secret-key`.env({ ...process.env, SOROBAN_SECRET_KEY: secret })
+const contractId = (await $`soroban contract deploy --wasm target/wasm32-unknown-unknown/release/i_like_big_budgets.wasm --network kalenet --source kalecount`.text()).replace(/\W/g, '')
 console.log('deployed contract')
 
 if (!contractId)

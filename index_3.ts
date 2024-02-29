@@ -19,7 +19,7 @@ let i = 0
 let args: [number, string][] = [
     [15_000, 'CPU'],
     [10_000, 'MEMORY'],
-    [25, 'STORAGE'], // NOTE if this is 50 you get a different error. Because why not?!
+    [50, 'STORAGE'], // NOTE if this is 50 you get a different error. Because why not?!
     [10, 'EVENTS'],
 ]
 
@@ -69,5 +69,5 @@ async function run(args: xdr.ScVal[]) {
     const sim = await rpc.simulateTransaction(simTx)
 
     if (SorobanRpc.Api.isSimulationSuccess(sim))
-        sorobill(sim);
+        sorobill(simTx, sim);
 }
