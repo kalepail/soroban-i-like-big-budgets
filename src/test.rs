@@ -19,11 +19,7 @@ fn test_v1() {
     let client = ContractClient::new(&env, &contract_id);
 
     env.budget().reset_unlimited();
-    client.run(&Some(1_500), &None, &None, &None, &None, &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &Some(200), &None, &None, &None, &None);
+    client.run(&Some(1_500), &Some(200), &None, &None, &None, &None);
     env.budget().print();
 }
 
@@ -34,10 +30,6 @@ fn test_v2() {
     let client = i_like_big_budgets::Client::new(&env, &contract_id);
 
     env.budget().reset_unlimited();
-    client.run(&Some(1_500), &None, &None, &None, &None, &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &Some(200), &None, &None, &None, &None);
+    client.run(&Some(1_500), &Some(200), &None, &None, &None, &None);
     env.budget().print();
 }
