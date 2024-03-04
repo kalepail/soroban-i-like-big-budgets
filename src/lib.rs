@@ -20,7 +20,7 @@ impl Contract {
         set: Option<u32>,
         get: Option<u32>,
         events: Option<u32>,
-        _tnx: Option<Bytes>,
+        _txn: Option<Bytes>,
     ) {
         // "txMaxInstructions": "100000000",
         if cpu.is_some() {

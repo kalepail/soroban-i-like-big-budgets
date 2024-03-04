@@ -31,8 +31,10 @@ console.log('deployed contract')
 if (!contractId)
     throw new Error('Contract not deployed')
 
-await $`soroban contract invoke --id ${contractId} --network kalenet --source kalecount -- init`.quiet()
-console.log('initialized contract');
+const init = await $`soroban contract invoke --id ${contractId} --network kalenet --source kalecount -- init`.quiet()
+
+if (init.exitCode === 0)
+    console.log('initialized contract')
 
 let file = ``
 file += `CONTRACT_ID=${contractId}\n`
