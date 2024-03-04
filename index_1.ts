@@ -1,4 +1,4 @@
-import { Account, Keypair, Networks, Operation, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { Account, Keypair, Networks, Operation, SorobanDataBuilder, SorobanRpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from "@stellar/stellar-sdk";
 
 if (
     !Bun.env.CONTRACT_ID
@@ -15,17 +15,19 @@ const contractId = Bun.env.CONTRACT_ID
 const networkPassphrase = Networks.STANDALONE
 
 let i = 0
-let args: [number, string][] = [
-    [15_000, 'CPU'],
-    [10_000, 'MEMORY'],
-    [25, 'STORAGE'], // NOTE if this is 50 you get a different error. Because why not?!
-    [10, 'EVENTS'],
+let args = [
+    [1500, 'u32', 'CPU'],
+    [200, 'u32', 'MEM'],
+    [50, 'u32', 'SET'], // NOTE if this is 50 you get a different error. Because why not?!
+    [50, 'u32', 'GET'],
+    [1, 'u32', 'EVENTS'],
+    [Buffer.alloc(71_680), 'bytes', 'TXN'],
 ]
 
-for (const [big, type] of args) {
+for (const [big, type, kind] of args) {
     try {
         console.log(`\n`);
-        console.log(`RUNNING TEST FOR ${type}`);
+        console.log(`RUNNING TEST FOR ${kind}`);
         console.log(`--------------------------`);
 
         const args = [
@@ -33,10 +35,12 @@ for (const [big, type] of args) {
             xdr.ScVal.scvVoid(),
             xdr.ScVal.scvVoid(),
             xdr.ScVal.scvVoid(),
+            xdr.ScVal.scvVoid(),
+            xdr.ScVal.scvVoid(),
         ]
         const bigArgs = [...args]
 
-        bigArgs[i] = nativeToScVal(big, { type: 'u32' })
+        bigArgs[i] = nativeToScVal(big, { type })
 
         await run(bigArgs)
     } catch (error) {
@@ -54,7 +58,7 @@ async function run(args: xdr.ScVal[]) {
         .catch(() => { throw new Error(`Issue with ${pubkey} account. Ensure you're running the \`./docker.sh\` network and have run \`bun run deploy.ts\` recently.`) })
 
     const simTx = new TransactionBuilder(source, {
-        fee: (2 ** 32 - 1).toString(),
+        fee: '0',
         networkPassphrase
     })
         .addOperation(Operation.invokeContractFunction({
@@ -65,47 +69,40 @@ async function run(args: xdr.ScVal[]) {
         .setTimeout(0)
         .build()
 
-    console.log(simTx.toXDR());
+    const simRes = await rpc.simulateTransaction(simTx)
 
-    const simRes = await rpc._simulateTransaction(simTx)
+    if (SorobanRpc.Api.isSimulationSuccess(simRes)) {
+        simRes.minResourceFee = '4294967295'
 
-    console.log(simRes);
+        const resources = simRes.transactionData.build().resources()
+        const tx = SorobanRpc.assembleTransaction(simTx, simRes)
+            .setSorobanData(simRes.transactionData
+                .setResourceFee(100_000_000)
+                .setResources(100_000_000, resources.readBytes(), resources.writeBytes())
+                .build()
+            )
+            .build()
 
-    if (!simRes.transactionData)
-        throw new Error('No transaction data. Review simulation response for errors. Maybe try running `bun run deploy.ts` again.')
+        tx.sign(keypair)
 
-    simRes.minResourceFee = '0'
+        const sendRes = await rpc._sendTransaction(tx)
 
-    const tx = SorobanRpc.assembleTransaction(
-        simTx,
-        simRes
-    )
-        .build()
+        if (sendRes.status === 'PENDING') {
+            await Bun.sleep(5000);
+            const getRes = await rpc._getTransaction(sendRes.hash)
 
-    tx.sign(keypair)
-
-    console.log(tx.toXDR());
-
-    const sendRes = await rpc._sendTransaction(tx)
-
-    console.log(sendRes);
-
-    sendRes.status === 'PENDING' && await new Promise((resolve) => setTimeout(async () => {
-        const getRes = await rpc._getTransaction(sendRes.hash)
-
-        getRes.status !== 'FAILED' && console.log(getRes)
-
-        getRes.status === 'FAILED' && xdr.TransactionMeta
-            .fromXDR(getRes.resultMetaXdr!, 'base64')
-            .v3()
-            .sorobanMeta()
-            ?.diagnosticEvents()
-            .forEach((event) => {
-                console.log(
-                    scValToNative(event.event().body().v0().data())
-                )
-            })
-
-        resolve(1)
-    }, 5000))
+            if (getRes.resultMetaXdr) {
+                xdr.TransactionMeta
+                    .fromXDR(getRes.resultMetaXdr, 'base64')
+                    .v3()
+                    .sorobanMeta()
+                    ?.diagnosticEvents()
+                    .forEach((event) => {
+                        console.log(
+                            scValToNative(event.event().body().v0().data())
+                        )
+                    })
+            } else console.log(getRes)
+        } else console.log(sendRes)
+    } else console.log(await rpc._simulateTransaction(simTx));
 }

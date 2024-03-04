@@ -8,7 +8,7 @@ use crate::{Contract, ContractClient};
 
 mod i_like_big_budgets {
     soroban_sdk::contractimport!(
-        file = "./target/wasm32-unknown-unknown/release/i_like_big_budgets.wasm"
+        file = "./target/wasm32-unknown-unknown/release/i_like_big_budgets.optimized.wasm"
     );
 }
 
@@ -19,19 +19,11 @@ fn test_v1() {
     let client = ContractClient::new(&env, &contract_id);
 
     env.budget().reset_unlimited();
-    client.run(&Some(12_000), &None, &None, &None);
+    client.run(&Some(1_500), &None, &None, &None, &None, &None);
     env.budget().print();
 
     env.budget().reset_unlimited();
-    client.run(&None, &Some(10_000), &None, &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &None, &Some(30), &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &None, &None, &Some(10));
+    client.run(&None, &Some(200), &None, &None, &None, &None);
     env.budget().print();
 }
 
@@ -42,18 +34,10 @@ fn test_v2() {
     let client = i_like_big_budgets::Client::new(&env, &contract_id);
 
     env.budget().reset_unlimited();
-    client.run(&Some(12_000), &None, &None, &None);
+    client.run(&Some(1_500), &None, &None, &None, &None, &None);
     env.budget().print();
 
     env.budget().reset_unlimited();
-    client.run(&None, &Some(10_000), &None, &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &None, &Some(30), &None);
-    env.budget().print();
-
-    env.budget().reset_unlimited();
-    client.run(&None, &None, &None, &Some(10));
+    client.run(&None, &Some(200), &None, &None, &None, &None);
     env.budget().print();
 }
