@@ -4,7 +4,7 @@
   "type": "module",
   "dependencies": {
     "@stellar/stellar-sdk": "^11.2.2",
-    "sorobill": "^1.0.0"
+    "sorobill": "^1.0.5"
   },
   "devDependencies": {
     "@types/bun": "latest",
