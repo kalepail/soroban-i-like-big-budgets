@@ -73,6 +73,6 @@ async function run(args: xdr.ScVal[]) {
 
     if (SorobanRpc.Api.isSimulationSuccess(simRes))
         console.log(sorobill(simRes));
-    else 
+    else
         console.log(await rpc._simulateTransaction(simTx));
 }

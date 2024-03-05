@@ -48,7 +48,7 @@ const simTx = new TransactionBuilder(source, {
 const simRes = await rpc.simulateTransaction(simTx)
 
 if (SorobanRpc.Api.isSimulationSuccess(simRes)) {
-    simRes.minResourceFee = '4294967295'
+    simRes.minResourceFee = MAX_U32.toString()
 
     const resources = simRes.transactionData.build().resources()
     const tx = SorobanRpc.assembleTransaction(simTx, simRes)
