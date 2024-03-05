@@ -74,7 +74,6 @@ async function run(smallArgs: xdr.ScVal[], bigArgs: xdr.ScVal[]) {
     const simRes = await rpc.simulateTransaction(simTx)
 
     if (SorobanRpc.Api.isSimulationSuccess(simRes)) {
-        const resources = simRes.transactionData.build().resources()
         const sorobanData = simRes.transactionData
             .setResourceFee(100_000_000)
             .setResources(100_000_000, 133_120, 66_560) // We _need_ to manually set resources here due to sm sim and big sim resource consumption differences
