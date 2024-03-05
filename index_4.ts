@@ -1,6 +1,4 @@
-import { nativeToScVal } from "@stellar/stellar-sdk";
-
-import { Account, Keypair, Networks, Operation, SorobanRpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+import { Account, Keypair, Networks, Operation, SorobanRpc, TransactionBuilder, nativeToScVal } from "@stellar/stellar-sdk";
 import { sorobill } from "sorobill";
 
 if (
