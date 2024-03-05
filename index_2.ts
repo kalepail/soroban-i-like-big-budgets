@@ -18,8 +18,8 @@ let i = 0
 let args = [
     [1, 1500, 'u32', 'CPU'], // New error [ "VM call trapped: OutOfFuel", "run" ]
     [1, 200, 'u32', 'MEM'],
-    [50, 50, 'u32', 'SET'],
-    [50, 50, 'u32', 'GET'],
+    [20, 20, 'u32', 'SET'],
+    [40, 40, 'u32', 'GET'],
     [0, 1, 'u32', 'EVENTS'],
     [Buffer.alloc(71_680), Buffer.alloc(71_680), 'bytes', 'TXN'],
 ]
@@ -77,7 +77,7 @@ async function run(smallArgs: xdr.ScVal[], bigArgs: xdr.ScVal[]) {
         const resources = simRes.transactionData.build().resources()
         const sorobanData = simRes.transactionData
             .setResourceFee(100_000_000)
-            .setResources(100_000_000, resources.readBytes(), resources.writeBytes()) // Need to manually set resources due to sm sim and big sim resource consumption differences
+            .setResources(100_000_000, 133_120, 66_560) // We _need_ to manually set resources here due to sm sim and big sim resource consumption differences
             .build();
 
         const tx = TransactionBuilder
